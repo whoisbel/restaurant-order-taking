@@ -23,13 +23,16 @@
             class="block w-full p-3 rounded-md border-2 border-gray-400 focus:outline-none focus:border-blue-500"
           />
         </div>
-        <div class="flex justify-end">
+        <div class="flex justify-between items-center mb-4">
           <button
             type="submit"
             class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 focus:outline-none focus:bg-blue-600"
           >
             Login
           </button>
+          <router-link to="/register" class="text-blue-500 hover:text-blue-700">
+            Create an account
+          </router-link>
         </div>
       </form>
       <p v-if="errorMessage" class="text-red-500 mt-4">{{ errorMessage }}</p>
@@ -40,20 +43,33 @@
 <script setup>
 import { ref } from "vue";
 import { useRouter } from "vue-router";
+import axios from "axios";
 
 const username = ref("");
 const password = ref("");
 const router = useRouter();
 const errorMessage = ref("");
+
 localStorage.setItem("isLoggedIn", "false");
+
 const handleLogin = () => {
-  console.log("handleLogin() called");
-  if (username.value === "admin" && password.value === "admin") {
-    console.log("redirecting to /dashboard");
-    localStorage.setItem("isLoggedIn", "true"); // Set isLoggedIn to true
-    router.push("/dashboard");
-  } else {
-    errorMessage.value = "Wrong username or password";
-  }
+  axios
+    .post("http://localhost/restaurant-order-taking/public/login.php", {
+      email: username.value,
+      password: password.value,
+    })
+    .then((response) => {
+      if (response.data.success) {
+        localStorage.setItem("isLoggedIn", "true"); // Set isLoggedIn to true
+        localStorage.setItem("employeeID", response.data.employeeID); // Store employeeID in localStorage
+        router.push("/dashboard");
+      } else {
+        errorMessage.value = response.data.message;
+      }
+    })
+    .catch((error) => {
+      errorMessage.value = "Network error occurred. Please try again.";
+      console.log(error);
+    });
 };
 </script>

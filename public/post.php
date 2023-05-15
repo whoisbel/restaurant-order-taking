@@ -1,67 +1,89 @@
 <?php
+header('Content-Type: application/json');
+header('Access-Control-Allow-Origin: *');
+header('Access-Control-Allow-Methods: POST');
+header('Access-Control-Allow-Headers: Access-Control-Allow-Headers, Content-Type, Access-Control-Allow-Methods, Authorization, X-Requested-With');
 
-header("Access-Control-Allow-Origin: *");
-header("Access-Control-Allow-Headers: *");
+// Receive data from frontend
+$data = json_decode(file_get_contents("php://input"));
 
-// MySQL credentials
+// Extract data
+$order = $data->order;
+$total = $data->total;
+$payment = $data->payment;
+$date = $data->date;
+$time = $data->time;
+$status = $data->status;
+$customerName = $data->customerName;
+$customerID = $data->customerID;
+$orderID = $data->orderID;
+$employeeID = $data->employeeID;
+// Connect to database
 $servername = "localhost";
 $username = "root";
 $password = "";
-$dbname = "restaurant";
+$dbname = "restobar";
 
-// Create connection
 $conn = new mysqli($servername, $username, $password, $dbname);
 
-// Check connection
 if ($conn->connect_error) {
     die("Connection failed: " . $conn->connect_error);
 }
 
-$data = json_decode(file_get_contents('php://input'), true);
+// Check if employee exists
+$sql = "SELECT EmployeeID FROM Employee WHERE EmployeeID = '$employeeID'";
+$result = $conn->query($sql);
 
-$orderID = $data['orderID'];
-$customerID = $data['customerID'];
-$order = $data['order'];
-$total = $data['total'];
-$payment = $data['payment'];
-$date = $data['date'];
-$time = $data['time'];
-$status = $data['status'];
-
-// Insert order into orders table
-$sql = "INSERT INTO orders (order_id, customer_id, total, payment_method, order_date, order_time, status) 
-        VALUES ('$orderID', '$customerID', $total, '$payment', '$date', '$time', '$status')";
-
-if ($conn->query($sql) !== TRUE) {
-    $response = "Error adding order: " . $conn->error;
-    $conn->close();
-    echo json_encode($response);
-    exit();
+if (!$result) {
+    die("Error: " . $sql . "<br>" . $conn->error);
 }
 
+if ($result->num_rows == 0) {
+    die("Employee not found");
+}
 
-// Insert order details into order_details table
-foreach ($order as $product) {
-    $productName = $product['name'];
-    $productID = $product['id'];
-    $quantity = $product['quantity'];
-    $productImage = $product['img'];
-    $price = $product['price'];
-    
-    $sql = "INSERT INTO order_details (Order_ID, Product_Name, Product_ID, Quantity, Product_Image, Price) 
-        VALUES ('$orderID', '$productName', $productID, $quantity, '$productImage', $price)";
+// Insert customer
+if (!empty($customerID) && !empty($customerName)) {
+    $sql = "INSERT INTO Customers (CustomerID, CustomerName) VALUES ('$customerID', '$customerName')";
 
-    if ($conn->query($sql) !== TRUE) {
-        $response = "Error adding order details: " . $conn->error;
-        $conn->close();
-        echo json_encode($response);
-        exit();
+    if (!$conn->query($sql)) {
+        die("Error: " . $sql . "<br>" . $conn->error);
     }
 }
 
+// Insert order
+if (!empty($orderID)) {
+    $sql = "INSERT INTO Orders (OrderID, EmployeeID, OrderDate, OrderTime, Status) VALUES ('$orderID', '$employeeID', '$date', '$time', '$status')";
 
-$response = "Order added successfully";
+    if (!$conn->query($sql)) {
+        die("Error: " . $sql . "<br>" . $conn->error);
+    }
+}
+
+// Insert payment
+$sql = "INSERT INTO Payment (PaymentID, CustomerID, PaymentMethod, Total) VALUES ('$orderID', '$customerID', '$payment', $total)";
+
+if (!$conn->query($sql)) {
+    die("Error: " . $sql . "<br>" . $conn->error);
+}
+
+// Insert or update order details
+if (!empty($order)) {
+    foreach ($order as $item) {
+        $menuItem = $item->name;
+        $quantity = $item->quantity;
+
+        $sql = "INSERT INTO OrderDetails (OrderID, CustomerID, MenuItem, Quantity) VALUES ('$orderID', '$customerID', '$menuItem', $quantity)";
+
+        if (!$conn->query($sql)) {
+            die("Error: " . $sql . "<br>" . $conn->error);
+        }
+    }
+}
+
 $conn->close();
-echo json_encode($response);
 
+// Send response
+$response = array("message" => "Order added successfully");
+echo json_encode($response);
 ?>

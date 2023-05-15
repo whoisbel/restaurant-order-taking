@@ -1,58 +1,75 @@
 <?php
+header('Content-Type: application/json');
+header('Access-Control-Allow-Origin: *');
 
-header("Access-Control-Allow-Origin: *");
-header("Access-Control-Allow-Headers: *");
-
-// MySQL credentials
+// Connect to database
 $servername = "localhost";
 $username = "root";
 $password = "";
-$dbname = "restaurant";
+$dbname = "restobar";
 
-// Create connection
 $conn = new mysqli($servername, $username, $password, $dbname);
 
-// Check connection
 if ($conn->connect_error) {
     die("Connection failed: " . $conn->connect_error);
 }
 
-$sql = "SELECT o.order_id, o.customer_id, o.total, o.payment_method, o.order_date, o.order_time, o.status,
-               d.Detail_ID, d.Product_Name, d.Product_ID, d.Quantity, d.Product_Image, d.Price
-        FROM orders o
-        INNER JOIN order_details d ON o.order_id = d.Order_ID";
-$result = $conn->query($sql);
+// Get orders
+$status = isset($_GET['status']) ? $_GET['status'] : 'all';
 
-if ($result->num_rows > 0) {
-    // Convert result set to associative array
-    $orders = array();
-    while ($row = $result->fetch_assoc()) {
-        $order_id = $row['order_id'];
-        if (!isset($orders[$order_id])) {
-            $orders[$order_id] = array(
-                'order_id' => $order_id,
-                'customer_id' => $row['customer_id'],
-                'total' => $row['total'],
-                'payment_method' => $row['payment_method'],
-                'order_date' => $row['order_date'],
-                'order_time' => $row['order_time'],
-                'status' => $row['status'],
-                'details' => array()
-            );
-        }
-        $orders[$order_id]['details'][] = array(
-            'Detail_ID' => $row['Detail_ID'],
-            'Product_Name' => $row['Product_Name'],
-            'Product_ID' => $row['Product_ID'],
-            'Quantity' => $row['Quantity'],
-            'Product_Image' => $row['Product_Image'],
-            'Price' => $row['Price']
-        );
-    }
-    echo json_encode(array_values($orders));
+if ($status == 'all') {
+    $sql = "SELECT Orders.OrderID, Orders.OrderDate, Orders.OrderTime, Payment.PaymentMethod, Payment.Total, Customers.CustomerName, Customers.CustomerID, Orders.Status as OrderStatus, OrderDetails.MenuItem, OrderDetails.Quantity
+            FROM Orders
+            JOIN Payment ON Orders.OrderID = Payment.PaymentID
+            JOIN Customers ON Payment.CustomerID = Customers.CustomerID
+            JOIN OrderDetails ON Orders.OrderID = OrderDetails.OrderID
+            ORDER BY Orders.OrderDate DESC, Orders.OrderTime DESC";
 } else {
-    echo "0 results";
+    $sql = "SELECT Orders.OrderID, Orders.OrderDate, Orders.OrderTime, Payment.PaymentMethod, Payment.Total, Customers.CustomerName, Customers.CustomerID, Orders.Status as OrderStatus, OrderDetails.MenuItem, OrderDetails.Quantity
+            FROM Orders
+            JOIN Payment ON Orders.OrderID = Payment.PaymentID
+            JOIN Customers ON Payment.CustomerID = Customers.CustomerID
+            JOIN OrderDetails ON Orders.OrderID = OrderDetails.OrderID
+            WHERE Orders.Status = '$status'
+            ORDER BY Orders.OrderDate DESC, Orders.OrderTime DESC";
 }
 
+$result = $conn->query($sql);
+
+if (!$result) {
+    die("Error: " . $sql . "<br>" . $conn->error);
+}
+
+// Group orders by ID
+$orders = array();
+
+while ($row = $result->fetch_assoc()) {
+    $orderID = $row['OrderID'];
+
+    if (!isset($orders[$orderID])) {
+        $orders[$orderID] = array(
+            'OrderID' => $orderID,
+            'OrderDate' => $row['OrderDate'],
+            'OrderTime' => $row['OrderTime'],
+            'PaymentMethod' => $row['PaymentMethod'],
+            'Total' => $row['Total'],
+            'CustomerName' => $row['CustomerName'],
+            'CustomerID' => $row['CustomerID'],
+            'OrderStatus' => $row['OrderStatus'],
+            'OrderDetails' => array(),
+        );
+    }
+
+    $orders[$orderID]['OrderDetails'][] = array(
+        'MenuItem' => $row['MenuItem'],
+        'Quantity' => $row['Quantity'],
+    );
+}
+
+// Close database connection
 $conn->close();
+
+// Send response
+$response = array("orders" => array_values($orders));
+echo json_encode($response);
 ?>

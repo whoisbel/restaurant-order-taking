@@ -1,48 +1,35 @@
 <?php
+header('Access-Control-Allow-Origin: *');
+header('Access-Control-Allow-Methods: POST, GET, OPTIONS');
+header('Access-Control-Allow-Headers: Origin, X-Requested-With, Content-Type, Accept');
+header('Content-Type: application/json');
 
-header("Access-Control-Allow-Origin: *");
-header("Access-Control-Allow-Headers: *");
+// Read input data
+$data = json_decode(file_get_contents('php://input'), true);
+$orderId = $data['orderId'];
+$status = $data['status'];
 
-// Establish a database connection
+// Update order status in database
 $servername = "localhost";
 $username = "root";
 $password = "";
-$dbname = "restaurant";
+$dbname = "restobar";
 
+// Create connection
 $conn = new mysqli($servername, $username, $password, $dbname);
 
-// Check for errors in the connection
+// Check connection
 if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
+  die("Connection failed: " . $conn->connect_error);
 }
 
-// Retrieve the request body and decode the JSON data
-$request_body = file_get_contents('php://input');
-$data = json_decode($request_body);
-
-// Get the order ID and status from the data
-$order_id = $data->order_id ?? null;
-$status = $data->status ?? null;
-
-// Debugging statements
-echo "Order ID: $order_id<br>";
-echo "Status: $status<br>";
-
-// Check if order ID and status are present in the data
-if (!$order_id || !$status) {
-    die("Invalid request: missing order ID or status");
-}
-
-// Update the order status in the database
-$sql = "UPDATE orders SET status='$status' WHERE order_id='$order_id'";
+$sql = "UPDATE orders SET status='$status' WHERE OrderID='$orderId'";
 
 if ($conn->query($sql) === TRUE) {
-    echo "Order status updated successfully";
+  echo json_encode(array("success" => true));
 } else {
-    echo "Error updating order status: " . $conn->error;
+  echo json_encode(array("success" => false));
 }
 
-// Close the database connection
 $conn->close();
-
 ?>

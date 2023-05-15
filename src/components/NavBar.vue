@@ -19,6 +19,9 @@
         <li class="pt-2 pr-0 text-white text-lg md:pl-4 md:pt-0">
           <router-link to="/history">History</router-link>
         </li>
+        <li class="pt-2 pr-0 text-white text-lg md:pl-4 md:pt-0">
+          <router-link to="/inventory">Inventory</router-link>
+        </li>
         <!-- render logout button if user is logged in -->
         <li
           v-if="isLoggedIn"

@@ -3,12 +3,18 @@ import HomeView from "@/views/HomeView.vue";
 import Dashboard from "@/views/Dashboard.vue";
 import Order from "@/views/Order.vue";
 import History from "@/views/History.vue";
-
+import Register from "@/views/Register.vue";
+import Inventory from "@/views/Inventory.vue";
 const routes = [
   {
     path: "/",
     name: "Home",
     component: HomeView,
+  },
+  {
+    path: "/register",
+    name: "register",
+    component: Register,
   },
   {
     path: "/dashboard",
@@ -26,6 +32,12 @@ const routes = [
     path: "/history",
     name: "History",
     component: History,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/inventory",
+    name: "Inventory",
+    component: Inventory,
     meta: { requiresAuth: true },
   },
 ];

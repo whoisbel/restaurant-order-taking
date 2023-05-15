@@ -11,6 +11,6 @@ import { useRoute } from "vue-router";
 import NavBar from "./components/NavBar.vue";
 
 const isHome = computed(() => {
-  return useRoute().name === "Home";
+  return useRoute().name === "Home" || useRoute().name === "register";
 });
 </script>
